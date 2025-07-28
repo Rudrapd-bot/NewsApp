@@ -3,21 +3,49 @@ import NewsItem from './NewsItem';
 
 const NewsBoard = ({ category }) => {
   const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true); // for loader or fallback
+  const [error, setError] = useState(null);     // for error handling
 
   useEffect(() => {
-    const url = `https://newsapi.org/v2/top-headlines?country=us&category=${category}&apiKey=${import.meta.env.VITE_API_KEY}`;
-    
-    fetch(url)
-      .then(response => response.json())
-      .then(data => setArticles(data.articles))
-      .catch(error => console.error("Error fetching news:", error));
-  }, [category]); // ✅ Correct
+    const fetchNews = async () => {
+      const apiKey = import.meta.env.VITE_API_KEY;
+      const url = `https://newsapi.org/v2/top-headlines?country=us&category=${category}&apiKey=${apiKey}`;
+
+      try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data.articles)) {
+          throw new Error("Invalid response structure");
+        }
+
+        setArticles(data.articles);
+        setError(null); // clear any past errors
+      } catch (err) {
+        console.error("Error fetching news:", err);
+        setError("Failed to fetch news articles.");
+        setArticles([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, [category]);
 
   return (
     <div className="container my-4">
-      <h2 className='text-center mb-4'>
+      <h2 className="text-center mb-4">
         Latest <span className="badge bg-danger text-uppercase">{category}</span> News
       </h2>
+
+      {loading && <p className="text-center">Loading...</p>}
+      {error && <p className="text-center text-danger">{error}</p>}
 
       <div className="row">
         {articles.map((news, index) => (
